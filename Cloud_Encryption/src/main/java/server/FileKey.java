@@ -21,7 +21,7 @@ public class FileKey
 			{
 				if(filekeytable.g("user").contains(fk.user).run(conn))
 				{
-					System.out.println("Duplicate File Entry");
+					System.out.println("Duplicate FileKey Entry");
 					filekeytable.insert(r.hashMap("name", fk.name).
 							with("user", fk.user).with("owner", fk.owner).with("key", fk.key)).optArg("conflict", "replace").run(conn);
 					return 1;
@@ -59,15 +59,23 @@ public class FileKey
 	
 	public static util.FileKey getFileKey(String owner, String filename, String user)
 	{
-		Cursor dbRes = filekeytable.getAll(filename).optArg("index", "name").filter(r.hashMap("owner", owner).with("user", user)).run(conn);
-		if(dbRes==null)
+		Cursor dbRes;
+		if(filekeytable.g("name").contains(filename).run(conn))
 		{
-			return null;
+			if(filekeytable.g("owner").contains(owner).run(conn))
+			{
+				if(filekeytable.g("user").contains(user).run(conn))
+				{
+					System.out.println("FileKey Entry Exists!");
+					dbRes = filekeytable.getAll(filename).optArg("index", "name").filter(r.hashMap("owner", owner).with("user", user)).run(conn);
+					HashMap m = (HashMap) dbRes.next();
+					util.FileKey fk = new util.FileKey((String)m.get("id"),(String)m.get("user"), (String)m.get("owner"), (String)m.get("name"), (byte[])m.get("key"));
+				}
+			}
 		}
-		HashMap m = (HashMap) dbRes.next();
-		util.FileKey fk = new util.FileKey((String)m.get("id"),(String)m.get("user"), (String)m.get("owner"), (String)m.get("name"), (byte[])m.get("key"));
 
-		return fk;
+		System.out.println("FileKey does not exist, returning empty FileKey!");
+		return new util.FileKey();
 	}
 	
 	public static HashMap getFileUsers(String owner, String filename)

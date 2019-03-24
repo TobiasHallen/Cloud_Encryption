@@ -27,5 +27,14 @@ public class FileKey
 		System.out.println(f.key);
 		
 	}
+	
+	public FileKey()
+	{
+		id = "";
+		user = "";
+		owner = "";
+		name = "";
+		key = "".getBytes();
+	}
 
 }

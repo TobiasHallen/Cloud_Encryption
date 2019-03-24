@@ -83,10 +83,15 @@ public class Client
 		System.out.println(owner+"     "+filename+"        "+ClientUser);
 		File f = ClientFileFunctions.GetFile(owner, filename, ClientUser);
 		FileKey fk = ClientFileKeyFunctions.GetFileKey(owner, filename, ClientUser);
-//		System.out.println(new String(fk.key));
-//		System.out.println(new String(f.data));
-		byte[] decodedKey = Crypto.decrypt(fk.key, privateKey);
-		byte[] decodedData = Crypto.decryptAES(new SecretKeySpec(decodedKey, 0, decodedKey.length,"DES"), f.data);
+		byte[] decodedData = "".getBytes();
+		try {
+			byte[] decodedKey = Crypto.decrypt(fk.key, privateKey);
+			decodedData = Crypto.decryptAES(new SecretKeySpec(decodedKey, 0, decodedKey.length,"DES"), f.data);
+		} catch (javax.crypto.BadPaddingException e) 
+		{
+			System.out.println("Error Decrypting: You do not have access to this File!");
+			System.exit(0);
+		}
 		FileUtils.writeByteArrayToFile(new java.io.File("C:\\Users\\artha\\Desktop\\testServer"+"\\noDecryption"+filename), f.data);
 		FileUtils.writeByteArrayToFile(new java.io.File(outPath), decodedData);
 		System.out.println("Successfully Downloaded File!");

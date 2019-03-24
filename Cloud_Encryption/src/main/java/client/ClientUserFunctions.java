@@ -27,7 +27,7 @@ public class ClientUserFunctions
 	{
 		Gson gson = new Gson();
 		HttpClient httpClient = HttpClientBuilder.create().build();
-		HttpPost post = new HttpPost("http://127.0.0.1:8000/register");		
+		HttpPost post = new HttpPost("http://80.111.202.166:8000/register");		
 		StringEntity postingString = new StringEntity(gson.toJson(u));
 		post.setEntity(postingString);
 		post.setHeader("Content-type", "application/json");
@@ -44,7 +44,7 @@ public class ClientUserFunctions
 	{
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		HttpClient httpClient = HttpClientBuilder.create().build();
-		HttpGet get = new HttpGet("http://127.0.0.1:8000"+"/users/"+username);
+		HttpGet get = new HttpGet("http://80.111.202.166:8000"+"/users/"+username);
 		get.setHeader("Content-type", "application/json");
 		HttpResponse response = httpClient.execute(get);
 		String json = EntityUtils.toString(response.getEntity());

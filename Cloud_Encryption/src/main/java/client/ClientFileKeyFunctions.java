@@ -27,7 +27,7 @@ public class ClientFileKeyFunctions
 		SignedRequest sr = new SignedRequest(message, signature);
 		String signedJSON = gson.toJson(sr);
 		HttpClient httpClient = HttpClientBuilder.create().build();
-		HttpPost post = new HttpPost("http://127.0.0.1:8000/sharefile");
+		HttpPost post = new HttpPost("http://80.111.202.166:8000/sharefile");
 		StringEntity postingString = new StringEntity(signedJSON);
 		post.setEntity(postingString);
 		post.setHeader("Content-type", "application/json");
@@ -47,7 +47,7 @@ public class ClientFileKeyFunctions
 		SignedRequest sr = new SignedRequest(message, signature);
 		String signedJSON = gson.toJson(sr);
 		HttpClient httpClient = HttpClientBuilder.create().build();
-		HttpPost post = new HttpPost("http://127.0.0.1:8000/revokefile");
+		HttpPost post = new HttpPost("http://80.111.202.166:8000/revokefile");
 		StringEntity postingString = new StringEntity(signedJSON);
 		post.setEntity(postingString);
 		post.setHeader("Content-type", "application/json");
@@ -62,7 +62,7 @@ public class ClientFileKeyFunctions
 	public static FileKey GetFileKey(String owner, String filename, String clientUser) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, ClientProtocolException, IOException
 	{
 		HttpClient httpClient = HttpClientBuilder.create().build();
-		HttpGet get = new HttpGet("http://127.0.0.1:8000/"+"users/"+owner+"/"+filename+"/key/"+clientUser);
+		HttpGet get = new HttpGet("http://80.111.202.166:8000/"+"users/"+owner+"/"+filename+"/key/"+clientUser);
 		HttpResponse response = httpClient.execute(get);
 		if(response.getStatusLine().getStatusCode()!=200)
 		{
