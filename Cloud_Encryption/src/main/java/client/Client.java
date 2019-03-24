@@ -9,6 +9,7 @@ import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 import java.util.Scanner;
 
 import javax.crypto.SecretKey;
@@ -16,6 +17,8 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.http.client.ClientProtocolException;
+
+import com.google.gson.Gson;
 
 public class Client 
 {
@@ -118,24 +121,33 @@ public class Client
 	
 	public static void Revoke(String filename, String[] users) throws ClientProtocolException, IOException, GeneralSecurityException
 	{
+		System.out.println(Arrays.toString(users));
 		File f = ClientFileFunctions.GetFile(ClientUser, filename, ClientUser);
 		FileKey fk = ClientFileKeyFunctions.GetFileKey(ClientUser, filename, ClientUser);
+		
 		byte[] decodedKey = Crypto.decrypt(fk.key, privateKey);
 		byte[] decodedData = Crypto.decryptAES(new SecretKeySpec(decodedKey, 0, decodedKey.length,"DES"), f.data);
 		SecretKey sk = Crypto.generateAESKey();
 		byte[] encodedData = Crypto.encryptAES(sk, decodedData);
 		f.data=encodedData;
 		ClientFileFunctions.Upload(f, privateKey);
+		
 		byte[] encodedKey=Crypto.encrypt(sk.getEncoded(), publicKey);
 		fk.key=encodedKey;
+		Gson gson = new Gson();
+		System.out.println(gson.toJson(fk, FileKey.class));
+		System.out.println(gson.toJson(fk, FileKey.class));
+		System.out.println(gson.toJson(fk, FileKey.class));
+
 		ClientFileKeyFunctions.Share(fk, privateKey);
+		
 		for(String u:users)
 		{
 			FileKey fileKey = new FileKey(u, ClientUser, filename, null);
 			ClientFileKeyFunctions.Revoke(fileKey, privateKey);
 		}
 		FileUsers fUsers = ClientFileFunctions.GetFileUsers(ClientUser, filename, ClientUser);
-		Share(filename, fUsers.users);
+		if(fUsers.users!=null)Share(filename, fUsers.users);
 		System.out.println("Successfully Revoked File!");
 	}
 

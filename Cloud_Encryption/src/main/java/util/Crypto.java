@@ -5,9 +5,9 @@ import java.util.Base64;
 
 public class Crypto 
 {
-	public boolean verify(PublicKey pk, byte[] message, String signature) throws SignatureException, InvalidKeyException, NoSuchAlgorithmException
+	public static boolean verify(PublicKey pk, byte[] message, String signature) throws SignatureException, InvalidKeyException, NoSuchAlgorithmException
 	{
-		Signature publicSignature = Signature.getInstance("SHA256withRSA");
+		Signature publicSignature = Signature.getInstance("SHA1withRSA");
 		publicSignature.initVerify(pk);
 		publicSignature.update(message);
 		

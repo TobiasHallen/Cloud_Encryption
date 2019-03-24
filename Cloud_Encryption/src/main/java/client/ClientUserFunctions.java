@@ -49,9 +49,8 @@ public class ClientUserFunctions
 		HttpResponse response = httpClient.execute(get);
 		String json = EntityUtils.toString(response.getEntity());
 		System.out.println(json);
-		String responseString = new BasicResponseHandler().handleResponse(response);
 		Gson g = new Gson();
-		return g.fromJson(responseString, User.class);
+		return g.fromJson(json, User.class);
 
 	}
 

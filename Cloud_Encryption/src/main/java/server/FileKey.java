@@ -1,8 +1,11 @@
 package server;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.rethinkdb.*;
 import com.rethinkdb.gen.ast.Table;
 import com.rethinkdb.net.Connection;
 import com.rethinkdb.net.Cursor;
+
 import java.util.HashMap;
 
 public class FileKey 
@@ -12,7 +15,7 @@ public class FileKey
 	static Connection conn = r.connection().hostname(DBHost).port(28015).connect();
 	static Table filekeytable = r.db("Cloud_Encryption").table("filekeys");
 
-	
+
 	public static int insert(util.FileKey fk)
 	{
 		if(filekeytable.g("name").contains(fk.name).run(conn))
@@ -28,12 +31,10 @@ public class FileKey
 				}
 			}
 		}
-
-		
-		 filekeytable.insert(r.hashMap("name", fk.name).with("user", fk.user).with("owner", fk.owner).with("key", r.binary(fk.key))).run(conn);
-		 return 0;
+		filekeytable.insert(r.hashMap("name", fk.name).with("user", fk.user).with("owner", fk.owner).with("key", r.binary(fk.key))).run(conn);
+		return 0;
 	}
-	
+
 	public static int revoke(util.FileKey fk)
 	{
 		if(fk.user == fk.owner)
@@ -41,47 +42,38 @@ public class FileKey
 			System.out.println("Cannot revoke own file access");
 			return 1;
 		}
-		Cursor dbRes = filekeytable.getAll(fk.name).optArg("index", "name").filter(r.hashMap("owner", fk.owner).with("user", fk.user)).run(conn);
+		Gson gson = new Gson();
+		String j = "";
+		util.FileKey f1;
+		Cursor dbRes = filekeytable.run(conn);
 		if(dbRes!=null)
+		for(Object doc : dbRes)
 		{
-			byte[] b = "".getBytes();
-			util.FileKey f = new util.FileKey("", "", "", "", b);
-			HashMap m = (HashMap) dbRes.next();
-			f.id=(String)m.get("id");
-			f.key=(byte[])m.get("key");
-			f.name=(String)m.get("name");
-			f.owner=(String)m.get("owner");
-			f.user=(String)m.get("user");
-			filekeytable.get(f.id).delete().run(conn);
-		}
-		return 0;
-	}
-	
-	public static util.FileKey getFileKey(String owner, String filename, String user)
-	{
-		Cursor dbRes;
-		if(filekeytable.g("name").contains(filename).run(conn))
-		{
-			if(filekeytable.g("owner").contains(owner).run(conn))
-			{
-				if(filekeytable.g("user").contains(user).run(conn))
-				{
-					System.out.println("FileKey Entry Exists!");
-					dbRes = filekeytable.getAll(filename).optArg("index", "name").filter(r.hashMap("owner", owner).with("user", user)).run(conn);
-					HashMap m = (HashMap) dbRes.next();
-					util.FileKey fk = new util.FileKey((String)m.get("id"),(String)m.get("user"), (String)m.get("owner"), (String)m.get("name"), (byte[])m.get("key"));
-				}
+			j = gson.toJson(doc);
+			System.out.println(j);
+			f1 = gson.fromJson(j, util.FileKey.class);
+			if(f1.name.equals(fk.name)&&f1.owner.equals(fk.owner)&&f1.user.equals(fk.user))
+			{	
+				filekeytable.get(f1.id).delete().run(conn);
+				return 0;
 			}
 		}
+		return 1;
+	}
 
-		System.out.println("FileKey does not exist, returning empty FileKey!");
-		return new util.FileKey();
-	}
-	
-	public static HashMap getFileUsers(String owner, String filename)
+	public static util.FileKey getFileKey(String owner, String filename, String user)
 	{
-		Cursor dbRes = filekeytable.getAll(filename).optArg("index", "name").filter(r.hashMap("owner", owner)).pluck("user").run(conn);
-		return (HashMap) dbRes.next();
+		Cursor dbRes = filekeytable.getAll(filename).optArg("index", "name").filter(r.hashMap("owner", owner).with("user", user)).run(conn);
+		HashMap m = (HashMap) dbRes.next();
+		util.FileKey fk = new util.FileKey((String)m.get("id"), (String)m.get("user"), (String)m.get("owner"), (String)m.get("name"), (byte[])m.get("key"));
+		return fk;
+
 	}
+
+public static HashMap getFileUsers(String owner, String filename)
+{
+	Cursor dbRes = filekeytable.getAll(filename).optArg("index", "name").filter(r.hashMap("owner", owner)).pluck("user").run(conn);
+	return (HashMap) dbRes.next();
+}
 
 }

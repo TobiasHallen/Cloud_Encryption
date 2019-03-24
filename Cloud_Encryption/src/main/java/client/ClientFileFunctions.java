@@ -25,6 +25,8 @@ public class ClientFileFunctions
 		String message = gson.toJson(f);
 		String signature = Crypto.sign(pk, message);
 		SignedRequest sr = new SignedRequest(message, signature);
+//		System.out.println(signature);
+		
 		String signedJSON = gson.toJson(sr);
 		HttpClient httpClient = HttpClientBuilder.create().build();
 		HttpPost post = new HttpPost("http://80.111.202.166:8000/uploadfile");

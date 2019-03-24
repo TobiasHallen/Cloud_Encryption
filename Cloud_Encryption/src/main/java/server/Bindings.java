@@ -4,6 +4,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.security.InvalidKeyException;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,111 +24,146 @@ import com.rethinkdb.RethinkDB;
 import com.rethinkdb.gen.ast.Table;
 import com.rethinkdb.net.Connection;
 
+import client.Crypto;
 import express.DynExpress;
 import express.http.RequestMethod;
 import express.http.request.Request;
 import express.http.response.Response;
+import util.SignedRequest;
 public class Bindings {
 	static String DBHost = "127.0.0.1";
 	public static final RethinkDB r = RethinkDB.r;
 	static Connection conn = r.connection().hostname(DBHost).port(28015).connect();
 	static Table filetable = r.db("Cloud_Encryption").table("files");
 
-    @DynExpress(context= "/register", method = RequestMethod.POST) // Default is context="/" and method=RequestMethod.GET
-    public void register(Request req, Response res) throws IOException {     
-    	JsonParser jsonParser = new JsonParser();
-    	JsonObject jsonObject = (JsonObject)jsonParser.parse(
-    		      new InputStreamReader(req.getBody(), "UTF-8"));
-    	Gson gson = new Gson();
-    	String json = gson.toJson(jsonObject);
-    	System.out.println(json);
-    	util.User user = gson.fromJson(json,util.User.class);
-    	User.insert(user);
-    	System.out.println(user.id);
-    	System.out.println(user.username);
-    	System.out.println(user.PubKey);
+	@DynExpress(context= "/register", method = RequestMethod.POST) // Default is context="/" and method=RequestMethod.GET
+	public void register(Request req, Response res) throws IOException {     
+		JsonParser jsonParser = new JsonParser();
+		JsonObject jsonObject = (JsonObject)jsonParser.parse(
+				new InputStreamReader(req.getBody(), "UTF-8"));
+		Gson gson = new Gson();
+		String json = gson.toJson(jsonObject);
+		//    	System.out.println(json);
+		util.User user = gson.fromJson(json,util.User.class);
+		User.insert(user);
+		System.out.println(user.id);
+		System.out.println(user.username);
+		System.out.println(user.PubKey);
 
-        res.send("User Registered!");
+		res.send("User Registered!");
 
-    }
+	}
 
-    @DynExpress(context= "/uploadfile", method = RequestMethod.POST) // Only context is defined, method=RequestMethod.GET is used as method
-    public void uploadFile(Request req, Response res) throws JsonIOException, JsonSyntaxException, UnsupportedEncodingException {
-    	System.out.println("Received Upload Request!");
-    	JsonParser jsonParser = new JsonParser();
-    	JsonObject jsonObject = (JsonObject)jsonParser.parse(
-    		      new InputStreamReader(req.getBody(), "UTF-8"));
-    	Gson gson = new Gson();
-    	String json = jsonObject.get("message").getAsString();
-    	System.out.println(json);
-    	util.File file = gson.fromJson(json, util.File.class);
-//    	System.out.println(new String(file.data));
-    	File.insert(file);
-        res.send("File Uploaded!");
-    }
+	@DynExpress(context= "/uploadfile", method = RequestMethod.POST) // Only context is defined, method=RequestMethod.GET is used as method
+	public void uploadFile(Request req, Response res) throws JsonIOException, JsonSyntaxException, UnsupportedEncodingException, InvalidKeyException, SignatureException, NoSuchAlgorithmException, InvalidKeySpecException {
+		System.out.println("Received Upload Request!");
+		JsonParser jsonParser = new JsonParser();
+		JsonObject jsonObject = (JsonObject)jsonParser.parse(
+				new InputStreamReader(req.getBody(), "UTF-8"));
+		Gson gson = new Gson();
+		String message = jsonObject.get("message").getAsString();
+		String sig = jsonObject.get("signature").getAsString();
+		System.out.println(sig);
 
-    @DynExpress(context = "/sharefile", method = RequestMethod.POST) // Both defined
-    public void shareFile(Request req, Response res) throws JsonIOException, JsonSyntaxException, UnsupportedEncodingException {
-    	System.out.println("Received Share Request!");
-    	JsonParser jsonParser = new JsonParser();
-    	JsonObject jsonObject = (JsonObject)jsonParser.parse(
-    		      new InputStreamReader(req.getBody(), "UTF-8"));
-    	Gson gson = new Gson();
-    	String json = jsonObject.get("message").getAsString();
-    	System.out.println(json);
-    	util.FileKey fk = gson.fromJson(json,util.FileKey.class);
-    	FileKey.insert(fk);
-        res.send("File Shared!");
-    }
+		//    	System.out.println(json);
+		util.File file = gson.fromJson(message, util.File.class);
+		util.User u = User.GetUser(file.owner);
+		if(!util.Crypto.verify(KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(u.PubKey)), message.getBytes(), sig))
+		{
+			System.out.println("Could not Verify Signature!");
+			return;
+		}
 
-    @DynExpress(context= "/revokefile", method = RequestMethod.POST) // Only the method is defined, "/" is used as context
-    public void revokeFile(Request req, Response res) throws JsonIOException, JsonSyntaxException, UnsupportedEncodingException {
-    	JsonParser jsonParser = new JsonParser();
-    	JsonObject jsonObject = (JsonObject)jsonParser.parse(
-    		      new InputStreamReader(req.getBody(), "UTF-8"));
-    	Gson gson = new Gson();
-    	String json = jsonObject.get("message").getAsString();
-    	System.out.println(json);
-    	util.FileKey fk = gson.fromJson(json,util.FileKey.class);
-    	FileKey.revoke(fk);
-    	System.out.println(fk.id);
-    	System.out.println(fk.name);
-    	System.out.println(fk.owner);
-    	System.out.println(fk.user);
+		//    	System.out.println(new String(file.data));
+		File.insert(file);
+		res.send("File Uploaded!");
+	}
 
-        res.send("File Shared!");
-    }
-    
-    @DynExpress(context = "/users/:username", method = RequestMethod.GET) // Both defined
-    public void getUser(Request req, Response res) throws JsonIOException, JsonSyntaxException, UnsupportedEncodingException {
-    	util.User u = User.GetUser(req.getParam("username"));
-    	Gson gson = new Gson();
-    	String json = gson.toJson(u);    	
-        res.send(json);
-    }
+	@DynExpress(context = "/sharefile", method = RequestMethod.POST) // Both defined
+	public void shareFile(Request req, Response res) throws JsonIOException, JsonSyntaxException, UnsupportedEncodingException, InvalidKeyException, SignatureException, NoSuchAlgorithmException, InvalidKeySpecException {
+		System.out.println("Received Share Request!");
+		JsonParser jsonParser = new JsonParser();
+		JsonObject jsonObject = (JsonObject)jsonParser.parse(
+				new InputStreamReader(req.getBody(), "UTF-8"));
+		Gson gson = new Gson();
+		String message = jsonObject.get("message").getAsString();
+		String sig = jsonObject.get("signature").getAsString();
+//		System.out.println(jsonObject.toString());
 
-    @DynExpress(context = "/users/:username/:filename", method = RequestMethod.GET) // Both defined
-    public void getFile(Request req, Response res) {
-    	util.File f = File.getFile(req.getParam("username"), req.getParam("filename"));
-    	Gson gson = new Gson();
-    	String json = gson.toJson(f);    	
-        res.send(json);
-    }
+		util.FileKey fk = gson.fromJson(message,util.FileKey.class);
+		util.User u = User.GetUser(fk.owner);
+		if(!util.Crypto.verify(KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(u.PubKey)), message.getBytes(), sig))
+		{
+			System.out.println("Could not Verify Signature!");
+			return;
+		}
+		System.out.println(message);
+		System.out.println(message);
+		System.out.println(message);
+		System.out.println(message);
 
-    @DynExpress(context = "/users/:username/:filename/users", method = RequestMethod.GET) // Both defined
-    public void getFileUsers(Request req, Response res) {
-    	HashMap m = FileKey.getFileUsers(req.getParam("username"), req.getParam("filename"));
-    	Gson gson = new Gson();
-    	String json = gson.toJson(m);    	
-        res.send(json);
-    }
+		FileKey.insert(fk);
+		res.send("File Shared!");
+	}
 
-    @DynExpress(context = "/users/:username/:filename/key/:user", method = RequestMethod.GET) // Both defined
-    public void getFileKey(Request req, Response res) {
-    	util.FileKey fk = FileKey.getFileKey(req.getParam("username"), req.getParam("filename"), req.getParam("user"));
-    	Gson gson = new Gson();
-    	String json = gson.toJson(fk);    	
-        res.send(json);
-    }
+	@DynExpress(context= "/revokefile", method = RequestMethod.POST) // Only the method is defined, "/" is used as context
+	public void revokeFile(Request req, Response res) throws JsonIOException, JsonSyntaxException, UnsupportedEncodingException, InvalidKeyException, SignatureException, NoSuchAlgorithmException, InvalidKeySpecException {
+		JsonParser jsonParser = new JsonParser();
+		JsonObject jsonObject = (JsonObject)jsonParser.parse(
+				new InputStreamReader(req.getBody(), "UTF-8"));
+		Gson gson = new Gson();
+		String message = jsonObject.get("message").getAsString();
+		String sig = jsonObject.get("signature").getAsString();
+
+		//    	System.out.println(json);
+		util.FileKey f1 = gson.fromJson(message, util.FileKey.class);
+		util.FileKey fk = FileKey.getFileKey(f1.owner, f1.name, f1.user);
+		util.User u = User.GetUser(fk.owner);
+		if(!util.Crypto.verify(KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(u.PubKey)), message.getBytes(), sig))
+		{
+			System.out.println("Could not Verify Signature!");
+			return;
+		}
+
+		FileKey.revoke(fk);
+		System.out.println(fk.id);
+		System.out.println(fk.name);
+		System.out.println(fk.owner);
+		System.out.println(fk.user);
+
+		res.send("File Shared!");
+	}
+
+	@DynExpress(context = "/users/:username", method = RequestMethod.GET) // Both defined
+	public void getUser(Request req, Response res) throws JsonIOException, JsonSyntaxException, UnsupportedEncodingException {
+		util.User u = User.GetUser(req.getParam("username"));
+		Gson gson = new Gson();
+		String json = gson.toJson(u);    	
+		res.send(json);
+	}
+
+	@DynExpress(context = "/users/:username/:filename", method = RequestMethod.GET) // Both defined
+	public void getFile(Request req, Response res) {
+		util.File f = File.getFile(req.getParam("username"), req.getParam("filename"));
+		Gson gson = new Gson();
+		String json = gson.toJson(f);    	
+		res.send(json);
+	}
+
+	@DynExpress(context = "/users/:username/:filename/users", method = RequestMethod.GET) // Both defined
+	public void getFileUsers(Request req, Response res) {
+		HashMap m = FileKey.getFileUsers(req.getParam("username"), req.getParam("filename"));
+		Gson gson = new Gson();
+		String json = gson.toJson(m);    	
+		res.send(json);
+	}
+
+	@DynExpress(context = "/users/:username/:filename/key/:user", method = RequestMethod.GET) // Both defined
+	public void getFileKey(Request req, Response res) {
+		util.FileKey fk = FileKey.getFileKey(req.getParam("username"), req.getParam("filename"), req.getParam("user"));
+		Gson gson = new Gson();
+		String json = gson.toJson(fk);    	
+		res.send(json);
+	}
 
 }
