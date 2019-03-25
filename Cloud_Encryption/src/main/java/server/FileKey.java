@@ -25,14 +25,20 @@ public class FileKey
 				if(filekeytable.g("user").contains(fk.user).run(conn))
 				{
 					System.out.println("Duplicate FileKey Entry");
-					filekeytable.insert(r.hashMap("name", fk.name).
-							with("user", fk.user).with("owner", fk.owner).with("key", fk.key)).optArg("conflict", "replace").run(conn);
-					return 1;
+					util.FileKey f = getFileKey(fk.owner, fk.name, fk.user);
+					f.id = fk.id;
+					update(fk);
+					return 0;
 				}
 			}
 		}
 		filekeytable.insert(r.hashMap("name", fk.name).with("user", fk.user).with("owner", fk.owner).with("key", r.binary(fk.key))).run(conn);
 		return 0;
+	}
+
+	public static void update(util.FileKey fk) 
+	{
+		filekeytable.get(fk.id).update(fk).run(conn);
 	}
 
 	public static int revoke(util.FileKey fk)
@@ -42,23 +48,9 @@ public class FileKey
 			System.out.println("Cannot revoke own file access");
 			return 1;
 		}
-		Gson gson = new Gson();
-		String j = "";
-		util.FileKey f1;
-		Cursor dbRes = filekeytable.run(conn);
-		if(dbRes!=null)
-		for(Object doc : dbRes)
-		{
-			j = gson.toJson(doc);
-			System.out.println(j);
-			f1 = gson.fromJson(j, util.FileKey.class);
-			if(f1.name.equals(fk.name)&&f1.owner.equals(fk.owner)&&f1.user.equals(fk.user))
-			{	
-				filekeytable.get(f1.id).delete().run(conn);
-				return 0;
-			}
-		}
-		return 1;
+		System.out.println(getFileKey(fk.owner, fk.name, fk.user).id);
+		filekeytable.get(getFileKey(fk.owner, fk.name, fk.user).id).delete().run(conn);
+		return 0;
 	}
 
 	public static util.FileKey getFileKey(String owner, String filename, String user)
