@@ -55,11 +55,18 @@ public class FileKey
 
 	public static util.FileKey getFileKey(String owner, String filename, String user)
 	{
-		Cursor dbRes = filekeytable.getAll(filename).optArg("index", "name").filter(r.hashMap("owner", owner).with("user", user)).run(conn);
-		HashMap m = (HashMap) dbRes.next();
-		util.FileKey fk = new util.FileKey((String)m.get("id"), (String)m.get("user"), (String)m.get("owner"), (String)m.get("name"), (byte[])m.get("key"));
-		return fk;
-
+		
+		Cursor dbRes;
+		try {
+			dbRes = filekeytable.getAll(filename).optArg("index", "name").filter(r.hashMap("owner", owner).with("user", user)).run(conn);
+			HashMap m = (HashMap) dbRes.next();
+			util.FileKey fk = new util.FileKey((String)m.get("id"), (String)m.get("user"), (String)m.get("owner"), (String)m.get("name"), (byte[])m.get("key"));
+			return fk;
+		} catch (java.util.NoSuchElementException e) {
+			System.out.println("Invalid file access");
+			System.out.println("User "+user+" does not have access to file "+filename+" owned by "+owner);
+		}
+		return new util.FileKey();
 	}
 
 public static HashMap getFileUsers(String owner, String filename)

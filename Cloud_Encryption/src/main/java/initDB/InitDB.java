@@ -28,7 +28,7 @@ class InitDB
 		r.db("Cloud_Encryption").tableCreate("filekeys").run(conn);
 		r.db("Cloud_Encryption").table("filekeys").indexCreate("name").run(conn);
 		r.db("Cloud_Encryption").table("filekeys").indexCreate("owner").run(conn);
-		r.db("Cloud_Encryption").table("filekeys").indexCreate("user").run(conn);		System.out.println("hello");
+		r.db("Cloud_Encryption").table("filekeys").indexCreate("user").run(conn);		
 
 		System.exit(0);
 	}
