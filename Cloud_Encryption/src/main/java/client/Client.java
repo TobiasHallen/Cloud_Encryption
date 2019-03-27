@@ -130,14 +130,16 @@ public class Client
 		SecretKey sk = Crypto.generateAESKey();
 		byte[] encodedData = Crypto.encryptAES(sk, decodedData);
 		f.data=encodedData;
+		System.out.println(Arrays.equals(decodedData,encodedData));
+		System.out.println(Arrays.equals(decodedData,encodedData));
+		System.out.println(Arrays.equals(decodedData,encodedData));
+		System.out.println(Arrays.equals(decodedData,encodedData));
+
 		ClientFileFunctions.Upload(f, privateKey);
 		
 		byte[] encodedKey=Crypto.encrypt(sk.getEncoded(), publicKey);
 		fk.key=encodedKey;
 		Gson gson = new Gson();
-		System.out.println(gson.toJson(fk, FileKey.class));
-		System.out.println(gson.toJson(fk, FileKey.class));
-		System.out.println(gson.toJson(fk, FileKey.class));
 
 		ClientFileKeyFunctions.Share(fk, privateKey);
 		

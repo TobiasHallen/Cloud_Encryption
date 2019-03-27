@@ -1,5 +1,6 @@
 package server;
 
+import java.util.Arrays;
 import java.util.HashMap;
 
 import com.rethinkdb.RethinkDB;
@@ -17,28 +18,32 @@ public class File
 	
 	public static int insert(util.File f)
 	{
-		System.out.println(f.name);
-		System.out.println(f.owner);
-		
-
-//		if(filetable.g("name").contains(f.name).run(conn))
-//		{
-////			HashMap m = (HashMap) dbRes.next();
-////			System.out.println(m);
-//			System.out.println("Duplicate File Entry");
-////			filetable.insert(r.hashMap("name", f.name).with("id", f.id).with("owner", f.owner)).optArg("conflict", "replace").run(conn);
-//			return 1;
-//		}
-		
-//		System.out.println(new String(f.data));	
-		 filetable.insert(
-				 r.hashMap("name", f.name)
-				 .with("data", r.binary(f.data))
-				 .with("owner", f.owner)
-				 ).run(conn);
-		 return 0;
+		if(filetable.g("name").contains(f.name).run(conn))
+		{
+			if(filetable.g("owner").contains(f.owner).run(conn))
+			{
+					System.out.println("Duplicate File Entry");
+					util.File file = getFile(f.owner, f.name);
+					f.id = file.id;
+					System.out.println(Arrays.equals(f.data,file.data));
+					System.out.println(Arrays.equals(f.data,file.data));
+					System.out.println(Arrays.equals(f.data,file.data));
+					System.out.println(Arrays.equals(f.data,file.data));
+					filetable.insert(r.hashMap("name", f.name).with("owner", f.owner).with("id", f.id).with("data", r.binary(f.data))).optArg("conflict", "replace").run(conn);
+//					update(f);
+					return 0;
+				
+			}
+		}
+		filetable.insert(r.hashMap("name", f.name).with("owner", f.owner).with("data", r.binary(f.data))).run(conn);
+		return 0;
 	}
 	
+	public static void update(util.File f) 
+	{
+		filetable.get(f.id).update(f).run(conn);
+	}
+
 	public static util.File getFile(String Owner, String filename)
 	{
 		Cursor dbRes = filetable.getAll(filename).optArg("index", "name").filter(r.hashMap("owner", Owner)).run(conn);

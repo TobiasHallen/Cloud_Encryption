@@ -85,7 +85,6 @@ public class Crypto
 		privateKeyPEM = privateKeyPEM.replace("-----BEGIN RSA PRIVATE KEY-----\n", "");
 		privateKeyPEM = privateKeyPEM.replace("-----END RSA PRIVATE KEY-----", "");
 		byte[] encoded = Base64.decodeBase64(privateKeyPEM);
-		System.out.println(privateKeyPEM);
 		KeyFactory kf = KeyFactory.getInstance("RSA");
 		PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(encoded);
 		PrivateKey privKey =  kf.generatePrivate(keySpec);
@@ -145,7 +144,6 @@ public class Crypto
 	public static byte[] decryptAES(SecretKey key, byte[] encrypted) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException {
 		Cipher c = Cipher.getInstance("AES/ECB/PKCS5PADDING");
 		c.init(Cipher.DECRYPT_MODE, key);
-		System.out.println((encrypted).length);
 		byte[] decrypted = c.doFinal(encrypted);
 		return decrypted;       	
 	}

@@ -26,8 +26,9 @@ public class FileKey
 				{
 					System.out.println("Duplicate FileKey Entry");
 					util.FileKey f = getFileKey(fk.owner, fk.name, fk.user);
-					f.id = fk.id;
-					update(fk);
+					fk.id = f.id;
+					filekeytable.insert(r.hashMap("name", fk.name).with("id", fk.id).with("user", fk.user).with("owner", fk.owner).with("key", r.binary(fk.key))).optArg("conflict", "replace").run(conn);
+					//update(fk);
 					return 0;
 				}
 			}
