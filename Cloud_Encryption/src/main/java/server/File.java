@@ -25,13 +25,8 @@ public class File
 					System.out.println("Duplicate File Entry");
 					util.File file = getFile(f.owner, f.name);
 					f.id = file.id;
-					System.out.println(Arrays.equals(f.data,file.data));
-					System.out.println(Arrays.equals(f.data,file.data));
-					System.out.println(Arrays.equals(f.data,file.data));
-					System.out.println(Arrays.equals(f.data,file.data));
 					filetable.insert(r.hashMap("name", f.name).with("owner", f.owner).with("id", f.id).with("data", r.binary(f.data))).optArg("conflict", "replace").run(conn);
-//					update(f);
-					return 0;
+					return 1;
 				
 			}
 		}
@@ -46,10 +41,16 @@ public class File
 
 	public static util.File getFile(String Owner, String filename)
 	{
-		Cursor dbRes = filetable.getAll(filename).optArg("index", "name").filter(r.hashMap("owner", Owner)).run(conn);
-		HashMap m = (HashMap) dbRes.next();
-		util.File f = new util.File((String)m.get("id"), (String)m.get("owner"), (String)m.get("name"), (byte[])m.get("data"));
-		return f;
+		try {
+			Cursor dbRes = filetable.getAll(filename).optArg("index", "name").filter(r.hashMap("owner", Owner)).run(conn);
+			HashMap m = (HashMap) dbRes.next();
+			util.File f = new util.File((String)m.get("id"), (String)m.get("owner"), (String)m.get("name"), (byte[])m.get("data"));
+			return f;
+		} catch (java.util.NoSuchElementException e) {
+			System.out.println("Invalid file access");
+			System.out.println("File "+filename+" owned by "+Owner+" does not exist, perhaps unauthorized access!");
+		}
+		return new util.File();
 	}
 
 }

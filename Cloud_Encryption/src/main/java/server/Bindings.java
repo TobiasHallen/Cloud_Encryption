@@ -29,7 +29,9 @@ import express.DynExpress;
 import express.http.RequestMethod;
 import express.http.request.Request;
 import express.http.response.Response;
+import express.utils.Status;
 import util.SignedRequest;
+
 public class Bindings {
 	static String DBHost = "127.0.0.1";
 	public static final RethinkDB r = RethinkDB.r;
@@ -37,7 +39,8 @@ public class Bindings {
 	static Table filetable = r.db("Cloud_Encryption").table("files");
 
 	@DynExpress(context= "/register", method = RequestMethod.POST) // Default is context="/" and method=RequestMethod.GET
-	public void register(Request req, Response res) throws IOException {     
+	public void register(Request req, Response res) throws IOException {    
+		System.out.println("Received Register Request!");
 		JsonParser jsonParser = new JsonParser();
 		JsonObject jsonObject = (JsonObject)jsonParser.parse(
 				new InputStreamReader(req.getBody(), "UTF-8"));
@@ -45,12 +48,8 @@ public class Bindings {
 		String json = gson.toJson(jsonObject);
 		//    	System.out.println(json);
 		util.User user = gson.fromJson(json,util.User.class);
-		User.insert(user);
-		System.out.println(user.id);
-		System.out.println(user.username);
-		System.out.println(user.PubKey);
-
-		res.send("User Registered!");
+		if(User.insert(user)!=0)res.send("Duplicate User Entry!");
+		else res.send("User Registered!");
 
 	}
 
@@ -65,18 +64,17 @@ public class Bindings {
 		String sig = jsonObject.get("signature").getAsString();
 		System.out.println(sig);
 
-		//    	System.out.println(json);
 		util.File file = gson.fromJson(message, util.File.class);
 		util.User u = User.GetUser(file.owner);
 		if(!util.Crypto.verify(KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(u.PubKey)), message.getBytes(), sig))
 		{
 			System.out.println("Could not Verify Signature!");
-			return;
+			res.setStatus(Status.valueOf(403));
+			res.send("Could not Verify Signature!");
 		}
 
-		//    	System.out.println(new String(file.data));
-		File.insert(file);
-		res.send("File Uploaded!");
+		if(File.insert(file)!=0) res.send("Updated Existing File!");
+		else res.send("File Uploaded!");
 	}
 
 	@DynExpress(context = "/sharefile", method = RequestMethod.POST) // Both defined
@@ -88,26 +86,23 @@ public class Bindings {
 		Gson gson = new Gson();
 		String message = jsonObject.get("message").getAsString();
 		String sig = jsonObject.get("signature").getAsString();
-//		System.out.println(jsonObject.toString());
 
 		util.FileKey fk = gson.fromJson(message,util.FileKey.class);
 		util.User u = User.GetUser(fk.owner);
 		if(!util.Crypto.verify(KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(u.PubKey)), message.getBytes(), sig))
 		{
 			System.out.println("Could not Verify Signature!");
-			return;
+			res.setStatus(Status.valueOf(403));
+			res.send("Could not Verify Signature!");
 		}
-		System.out.println(message);
-		System.out.println(message);
-		System.out.println(message);
-		System.out.println(message);
 
-		FileKey.insert(fk);
-		res.send("File Shared!");
+		if(FileKey.insert(fk)!=0) res.send("Updated Existing FileKey!");
+		else res.send("File Shared!");
 	}
 
 	@DynExpress(context= "/revokefile", method = RequestMethod.POST) // Only the method is defined, "/" is used as context
 	public void revokeFile(Request req, Response res) throws JsonIOException, JsonSyntaxException, UnsupportedEncodingException, InvalidKeyException, SignatureException, NoSuchAlgorithmException, InvalidKeySpecException {
+		System.out.println("Received Revoke Request!");
 		JsonParser jsonParser = new JsonParser();
 		JsonObject jsonObject = (JsonObject)jsonParser.parse(
 				new InputStreamReader(req.getBody(), "UTF-8"));
@@ -115,23 +110,31 @@ public class Bindings {
 		String message = jsonObject.get("message").getAsString();
 		String sig = jsonObject.get("signature").getAsString();
 
-		//    	System.out.println(json);
 		util.FileKey f1 = gson.fromJson(message, util.FileKey.class);
 		util.FileKey fk = FileKey.getFileKey(f1.owner, f1.name, f1.user);
-		util.User u = User.GetUser(fk.owner);
-		if(!util.Crypto.verify(KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(u.PubKey)), message.getBytes(), sig))
+		if(!fk.id.equals(""))
 		{
-			System.out.println("Could not Verify Signature!");
-			return;
+			util.User u = User.GetUser(fk.owner);
+			if(!util.Crypto.verify(KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(u.PubKey)), message.getBytes(), sig))
+			{
+				System.out.println("Could not Verify Signature!");
+				res.setStatus(Status.valueOf(403));
+				res.send("Could not Verify Signature!");
+			}
+			else if(FileKey.revoke(fk)==2)
+			{
+				res.send("Cannot revoke own file access!");
+			}
+			else if(FileKey.revoke(fk)==1) 
+			{
+				res.send("FileKey entry does not exist, cannot be revoked!");
+			}
+			else res.send("File access Revoked!");
 		}
-
-		FileKey.revoke(fk);
-		System.out.println(fk.id);
-		System.out.println(fk.name);
-		System.out.println(fk.owner);
-		System.out.println(fk.user);
-
-		res.send("File Shared!");
+		else
+		{
+			res.send("FileKey entry does not exist, failed to revoke file access!");
+		}
 	}
 
 	@DynExpress(context = "/users/:username", method = RequestMethod.GET) // Both defined
@@ -145,9 +148,17 @@ public class Bindings {
 	@DynExpress(context = "/users/:username/:filename", method = RequestMethod.GET) // Both defined
 	public void getFile(Request req, Response res) {
 		util.File f = File.getFile(req.getParam("username"), req.getParam("filename"));
-		Gson gson = new Gson();
-		String json = gson.toJson(f);    	
-		res.send(json);
+		if(f.name.equals(""))
+		{
+			res.setStatus(Status.valueOf(403));
+			res.send("Failed Getting File, does not Exist.");
+		}
+		else 
+		{
+			Gson gson = new Gson();
+			String json = gson.toJson(f);    	
+			res.send(json);
+		}
 	}
 
 	@DynExpress(context = "/users/:username/:filename/users", method = RequestMethod.GET) // Both defined
@@ -161,9 +172,17 @@ public class Bindings {
 	@DynExpress(context = "/users/:username/:filename/key/:user", method = RequestMethod.GET) // Both defined
 	public void getFileKey(Request req, Response res) {
 		util.FileKey fk = FileKey.getFileKey(req.getParam("username"), req.getParam("filename"), req.getParam("user"));
-		Gson gson = new Gson();
-		String json = gson.toJson(fk);    	
-		res.send(json);
+		if (fk.name.equals(""))
+		{
+			res.setStatus(Status.valueOf(403));
+			res.send("Failed Getting FileKey, unauthorized access.");
+		}
+		else 
+		{
+			Gson gson = new Gson();
+			String json = gson.toJson(fk);    	
+			res.send(json);
+		}
 	}
 
 }

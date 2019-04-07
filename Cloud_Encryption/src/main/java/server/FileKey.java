@@ -28,8 +28,7 @@ public class FileKey
 					util.FileKey f = getFileKey(fk.owner, fk.name, fk.user);
 					fk.id = f.id;
 					filekeytable.insert(r.hashMap("name", fk.name).with("id", fk.id).with("user", fk.user).with("owner", fk.owner).with("key", r.binary(fk.key))).optArg("conflict", "replace").run(conn);
-					//update(fk);
-					return 0;
+					return 1;
 				}
 			}
 		}
@@ -47,11 +46,21 @@ public class FileKey
 		if(fk.user == fk.owner)
 		{
 			System.out.println("Cannot revoke own file access");
-			return 1;
+			return 2;
 		}
-		System.out.println(getFileKey(fk.owner, fk.name, fk.user).id);
-		filekeytable.get(getFileKey(fk.owner, fk.name, fk.user).id).delete().run(conn);
-		return 0;
+		if(filekeytable.g("name").contains(fk.name).run(conn))
+		{
+			if(filekeytable.g("owner").contains(fk.owner).run(conn))
+			{
+				if(filekeytable.g("user").contains(fk.user).run(conn))
+				{
+
+					filekeytable.get(getFileKey(fk.owner, fk.name, fk.user).id).delete().run(conn);
+					return 0;
+				}
+			}
+		}
+		return 1;
 	}
 
 	public static util.FileKey getFileKey(String owner, String filename, String user)
@@ -72,6 +81,7 @@ public class FileKey
 
 public static HashMap getFileUsers(String owner, String filename)
 {
+	
 	Cursor dbRes = filekeytable.getAll(filename).optArg("index", "name").filter(r.hashMap("owner", owner)).pluck("user").run(conn);
 	return (HashMap) dbRes.next();
 }

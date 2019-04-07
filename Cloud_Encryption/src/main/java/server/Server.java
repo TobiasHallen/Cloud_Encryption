@@ -19,13 +19,13 @@ public class Server
     public static void main(String[] args) throws IOException 
     {
         final JFrame frame = new JFrame();
-        frame.add( new JLabel(" Outout" ), BorderLayout.NORTH );
+        frame.add( new JLabel("Server" ), BorderLayout.NORTH );
         JTextArea ta = new JTextArea();
         TextAreaOutputStream taos = new TextAreaOutputStream(ta);
         PrintStream ps = new PrintStream(taos);
         System.setOut(ps);
         System.setErr(ps);  
-       
+        ta.setEditable(false);
         frame.add(new JScrollPane(ta));        
         frame.pack();
         frame.setVisible(true);

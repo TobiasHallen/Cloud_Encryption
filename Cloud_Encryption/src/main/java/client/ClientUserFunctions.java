@@ -25,6 +25,7 @@ public class ClientUserFunctions
 {
 	public static int Register(User u) throws ClientProtocolException, IOException
 	{
+		
 		Gson gson = new Gson();
 		HttpClient httpClient = HttpClientBuilder.create().build();
 		HttpPost post = new HttpPost("http://80.111.202.166:8000/register");		

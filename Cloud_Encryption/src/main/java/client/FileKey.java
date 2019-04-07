@@ -15,4 +15,13 @@ public class FileKey
 		this.name = name;
 		this.key = key;
 	}
+	public FileKey()
+	{
+		id = "";
+		user = "";
+		owner = "";
+		name = "";
+		key = "".getBytes();
+	}
+
 }

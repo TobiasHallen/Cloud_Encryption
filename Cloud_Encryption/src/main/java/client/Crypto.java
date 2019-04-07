@@ -35,12 +35,14 @@ import org.apache.commons.codec.binary.Base64;
 
 public class Crypto 
 {
-	public static KeyPair generateKeyPair() throws IOException, GeneralSecurityException
+	public static KeyPair generateKeyPair(String clientName) throws IOException, GeneralSecurityException
 	{
-
-		java.io.File pem = new java.io.File("privateKey.pem");
+		
+		new java.io.File("users/"+clientName).mkdirs();
+		java.io.File pem = new java.io.File("users/"+clientName+"/privateKey.pem");
 		if(!pem.exists())
 		{
+
 			KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
 			gen.initialize(2048);
 			KeyPair kp = gen.generateKeyPair();
@@ -49,6 +51,7 @@ public class Crypto
 			writer.writeObject(kp.getPrivate());
 			writer.writeObject(kp.getPublic());
 			writer.close();
+
 			return kp;
 		}
 		else
@@ -128,7 +131,7 @@ public class Crypto
 		return cipher.doFinal(rawText);
 	}
 
-	public static byte[] decrypt(byte[] cipherText, PrivateKey privateKey) throws IOException, GeneralSecurityException {
+	public static byte[] decrypt(byte[] cipherText, PrivateKey privateKey) throws GeneralSecurityException {
 		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1PADDING");
 		cipher.init(Cipher.DECRYPT_MODE, (RSAPrivateKey)privateKey);
 		return cipher.doFinal(cipherText);

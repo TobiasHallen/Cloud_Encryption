@@ -38,7 +38,7 @@ public class ClientFileKeyFunctions
 		}
 		else System.out.println("Response was OK");
 	}
-	
+
 	public static void Revoke(FileKey fk, PrivateKey pk) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, ClientProtocolException, IOException
 	{
 		Gson gson = new Gson();
@@ -58,7 +58,7 @@ public class ClientFileKeyFunctions
 		}
 		else System.out.println("Response was OK");
 	}
-	
+
 	public static FileKey GetFileKey(String owner, String filename, String clientUser) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, ClientProtocolException, IOException
 	{
 		HttpClient httpClient = HttpClientBuilder.create().build();
@@ -67,13 +67,17 @@ public class ClientFileKeyFunctions
 		if(response.getStatusLine().getStatusCode()!=200)
 		{
 			System.out.println("Response was not Positive: "+response.getStatusLine().getStatusCode());
+			return new FileKey();
 		}
-		else System.out.println("Response was OK");
-		String responseString = new BasicResponseHandler().handleResponse(response);
-		System.out.println(responseString);
-		Gson g = new Gson();
-		FileKey fk= g.fromJson(responseString, FileKey.class);
-		return fk;
+		else 
+		{
+			System.out.println("Response was OK");
+			String responseString = new BasicResponseHandler().handleResponse(response);
+			System.out.println(responseString);
+			Gson g = new Gson();
+			FileKey fk= g.fromJson(responseString, FileKey.class);
+			return fk;
+		}
 
 	}
 }

@@ -24,5 +24,14 @@ public class File
 		System.out.println(f.data);
 		
 	}
+	
+	public File()
+	{
+		id = "";
+		owner = "";
+		name = "";
+		data = "".getBytes();
+	}
+
 
 }

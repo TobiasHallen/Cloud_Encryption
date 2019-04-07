@@ -3,6 +3,7 @@ package client;
 import java.awt.event.KeyEvent;
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
+import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
@@ -24,9 +25,13 @@ import java.util.Scanner;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import javax.swing.AbstractAction;
+import javax.swing.Action;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -53,12 +58,12 @@ public class Client
 			"  download <user> <filename> <outputpath>\r\n" + 
 			"  share <filename> <users>\r\n" + 
 			"  revoke <filename> <users>\r\n" ; 
-			
+
 	final JFileChooser fc = new JFileChooser();
 	private static JTextArea txtAbout;
 	private static JTextField iOField;
 
-	private static JTextArea connectionInfoArea;
+	private static JTextArea clientInfoArea;
 	private static JTextArea userIOArea;
 
 	private static JScrollPane connInfoScrollPane;
@@ -68,61 +73,21 @@ public class Client
 	public static PublicKey publicKey;
 	public static PrivateKey privateKey;
 	public static KeyPair kp;
-	public static String ClientUser = "Tokmaru";
-	
+	public static String ClientUser = "default";
+
 	public static void main(String[] args) throws IOException, GeneralSecurityException, UnsupportedLookAndFeelException
+	{
+		initialize();	
+	}
+
+	public static void Register(String userName) throws ClientProtocolException, IOException, GeneralSecurityException
 	{
 		KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
 		kpg.initialize(1024);
-		kp = Crypto.generateKeyPair();
+		kp = Crypto.generateKeyPair(userName);
 		privateKey=kp.getPrivate();
 		publicKey=kp.getPublic();
-
-		UIManager.setLookAndFeel(UIManager.getLookAndFeel());
-		EventQueue.invokeLater(new Runnable() 
-		{
-			public void run() 
-			{
-				try 
-				{
-					initialize();
-					clientUI.setVisible(true);
-				} 
-				catch (Exception e) 
-				{
-					e.printStackTrace();
-				}
-			}
-		});		
-
-//		Scanner sc = new Scanner(System.in);
-//		String input = sc.nextLine();
-//		String[] inputArray = input.split("\\s+");
-//		if(inputArray[0].equals("register"))
-//			Register();
-//		else if(inputArray[0].equals("upload"))
-//		{
-//			Upload(inputArray[1], inputArray[2]);
-//		}
-//		else if(inputArray[0].equals("download"))
-//		{
-//			Download(inputArray[1], inputArray[2], inputArray[3]);
-//		}
-//		else if(inputArray[0].equals("share"))
-//		{
-//			Share(inputArray[1], java.util.Arrays.copyOfRange(inputArray, 2, inputArray.length));
-//		}
-//		else if(inputArray[0].equals("revoke"))
-//		{
-//			Revoke(inputArray[1], java.util.Arrays.copyOfRange(inputArray, 2, inputArray.length));
-//		}
-//		else System.out.println("Bad Input");
-
-	}
-
-	public static void Register() throws ClientProtocolException, IOException
-	{
-		User u = new User(ClientUser, publicKey.getEncoded());
+		User u = new User(userName, publicKey.getEncoded());
 		ClientUserFunctions.Register(u);
 		System.out.println("Registered Successfully!");
 	}
@@ -142,23 +107,39 @@ public class Client
 		System.out.println("Successfully Uploaded File!");
 	}
 
+	public static void SwitchUsers(String newUser) throws IOException, GeneralSecurityException
+	{
+		java.io.File pem = new java.io.File("users/"+newUser+"/privateKey.pem");
+		if(pem.exists())
+		{
+			ClientUser=newUser;
+			kp = Crypto.generateKeyPair(newUser);
+			privateKey=kp.getPrivate();
+			publicKey=kp.getPublic();
+			System.out.println("Logged in as: "+newUser);
+		}
+		else
+			System.out.println("User does not Exist, please register user before switching to it.");
+	}
+
 	public static void Download(String owner, String filename, String outPath) throws ClientProtocolException, IOException, GeneralSecurityException
 	{
 		System.out.println(owner+"     "+filename+"        "+ClientUser);
 		File f = ClientFileFunctions.GetFile(owner, filename, ClientUser);
 		FileKey fk = ClientFileKeyFunctions.GetFileKey(owner, filename, ClientUser);
+
 		byte[] decodedData = "".getBytes();
 		try {
 			byte[] decodedKey = Crypto.decrypt(fk.key, privateKey);
 			decodedData = Crypto.decryptAES(new SecretKeySpec(decodedKey, 0, decodedKey.length,"DES"), f.data);
+			FileUtils.writeByteArrayToFile(new java.io.File("C:\\Users\\artha\\Documents\\GitHub\\Cloud_Encryption\\Cloud_Encryption\\upANDdownloadFolder"+"\\noDecryption"+filename), f.data);
+			FileUtils.writeByteArrayToFile(new java.io.File(outPath), decodedData);
+			System.out.println("Successfully Downloaded File!");
 		} catch (javax.crypto.BadPaddingException e) 
 		{
 			System.out.println("Error Decrypting: You do not have access to this File!");
-			System.exit(0);
 		}
-		FileUtils.writeByteArrayToFile(new java.io.File("C:\\Users\\artha\\Desktop\\testServer"+"\\noDecryption"+filename), f.data);
-		FileUtils.writeByteArrayToFile(new java.io.File(outPath), decodedData);
-		System.out.println("Successfully Downloaded File!");
+
 	}
 
 	public static void Share(String filename, String[] Users) throws ClientProtocolException, IOException, GeneralSecurityException
@@ -191,10 +172,6 @@ public class Client
 		SecretKey sk = Crypto.generateAESKey();
 		byte[] encodedData = Crypto.encryptAES(sk, decodedData);
 		f.data=encodedData;
-		System.out.println(Arrays.equals(decodedData,encodedData));
-		System.out.println(Arrays.equals(decodedData,encodedData));
-		System.out.println(Arrays.equals(decodedData,encodedData));
-		System.out.println(Arrays.equals(decodedData,encodedData));
 
 		ClientFileFunctions.Upload(f, privateKey);
 
@@ -216,66 +193,59 @@ public class Client
 
 	private static void initialize() 
 	{
-		clientUI = new JFrame();
-		clientUI.addWindowListener(new WindowAdapter() 
+		final JFrame frame = new JFrame();
+		frame.add( new JLabel("Client" ), BorderLayout.NORTH );
+		JTextArea ta = new JTextArea(800, 400);
+		TextAreaOutputStream taos = new TextAreaOutputStream(ta);
+		PrintStream ps = new PrintStream(taos);
+		System.setOut(ps);
+		System.setErr(ps);  
+
+		final JTextField input = new JTextField("Input", 50);
+		input.requestFocus();
+		ActionListener a = new ActionListener()
 		{
-			public void windowClosing(WindowEvent e) 
-			{
-				clientUI.dispose();
-				System.exit(0);
-			}
-		});
-		clientUI.setTitle("Client");
-		clientUI.setBounds(100, 100, 913, 400);
-		clientUI.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		clientUI.setResizable(false);
 
-		JMenuBar menuBar = new JMenuBar();
-		clientUI.setJMenuBar(menuBar);
-
-		JMenu mnHelp = new JMenu("Help");
-		menuBar.add(mnHelp);
-
-		JMenuItem mntmAbout = new JMenuItem("Usage");
-		mntmAbout.addActionListener(new ActionListener() 
-		{
 			public void actionPerformed(ActionEvent e) 
 			{
-				System.out.println(usage);
-			}
-		});
-		mnHelp.add(mntmAbout);
-		clientUI.getContentPane().setLayout(null);
-
-		JButton sendCommand = new JButton("Send Command");
-		sendCommand.setMnemonic(KeyEvent.VK_ENTER);
-		sendCommand.addActionListener(new ActionListener() 
-		{
-			public void actionPerformed(ActionEvent e) 
-			{
-				String input = iOField.getText();
-				iOField.setText("");
-				String[] inputArray = input.split("\\s+");
+				String[] inputArray = input.getText().split("\\s+");
 				try {
 					if(inputArray[0].equals("register"))
-						Register();
+					{
+						input.setText("");
+						ClientUser = inputArray[1];
+						Register(ClientUser);
+					}
+					else if(inputArray[0].equals("login"))
+					{
+						input.setText("");
+						SwitchUsers(inputArray[1]);
+					}
 					else if(inputArray[0].equals("upload"))
 					{
+						input.setText("");
 						Upload(inputArray[1], inputArray[2]);
 					}
 					else if(inputArray[0].equals("download"))
 					{
+						input.setText("");
 						Download(inputArray[1], inputArray[2], inputArray[3]);
 					}
 					else if(inputArray[0].equals("share"))
 					{
+						input.setText("");
 						Share(inputArray[1], java.util.Arrays.copyOfRange(inputArray, 2, inputArray.length));
 					}
 					else if(inputArray[0].equals("revoke"))
 					{
+						input.setText("");
 						Revoke(inputArray[1], java.util.Arrays.copyOfRange(inputArray, 2, inputArray.length));
 					}
-					else System.out.println("Bad Input");
+					else 
+					{
+						input.setText("");
+						System.out.println("Bad Input");
+					}
 				}
 				catch (IOException io)
 				{
@@ -284,53 +254,32 @@ public class Client
 					System.out.println("GeneralSecurityException in Input");
 				}
 
-			}
-		});
-		sendCommand.setBounds(913-12-119, 350-32-12, 119, 32);
-		clientUI.getContentPane().add(sendCommand);
+			}};
+			input.addActionListener(a);	
+			ta.setEditable(false);
 
-		connectionInfoArea = new JTextArea();
-       
-		TextAreaOutputStream taos = new TextAreaOutputStream(connectionInfoArea);
-        PrintStream ps = new PrintStream(taos);
-        System.setOut(ps);
-        System.setErr(ps);  
+			frame.getContentPane().setLayout(new BoxLayout(frame.getContentPane(), BoxLayout.Y_AXIS));
+			frame.getContentPane().add(input);
+			frame.getContentPane().add(new JScrollPane(ta));  
 
-		connectionInfoArea.setLineWrap(false);
+			frame.pack();
+			frame.setVisible(true);
+			frame.setSize(800, 600);
 
-		connInfoScrollPane = new JScrollPane(connectionInfoArea);
+			frame.addWindowListener(new java.awt.event.WindowAdapter() {
+				@Override
+				public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+					if (JOptionPane.showConfirmDialog(frame, 
+							"Are you sure you want to close the Client?", "Close Client?", 
+							JOptionPane.YES_NO_OPTION,
+							JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION){
+						System.exit(0);
+					}
+				}
+			});
+			frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+			System.out.println("Client Ready for input!");
 
-		connInfoScrollPane.setBounds(12, 12, 913-24, 350-18-12-32);
-
-		connInfoScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-
-		clientUI.getContentPane().add(connInfoScrollPane);
-
-		DefaultCaret connCaret = (DefaultCaret) connectionInfoArea.getCaret();
-		connCaret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
-
-		iOField = new JTextField();
-
-		iOField.setBounds(12, 350-32-12, 913-24-12-119, 32);
-
-		clientUI.getContentPane().add(iOField);
-
-		iOField.setColumns(10);
-	}
-
-	public static void addToConnArea(String s) 
-	{
-		s += "\n";
-		try 
-		{
-			connectionInfoArea.append(s);
-		} 
-		catch (NullPointerException e) {}	
-	}
-
-	public static void addToInfoArea(String s) { 
-		s += "\n";
-		userIOArea.append(s);	
 	}
 
 }

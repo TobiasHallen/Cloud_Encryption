@@ -56,7 +56,6 @@ public class ClientFileFunctions
 		System.out.println(responseString);
 		Gson g = new Gson();
 		File f = g.fromJson(responseString, File.class);
-//		System.out.println(f.id);
 		return f;
 	}
 

@@ -17,8 +17,7 @@ public class User
 	{
 		if(userTable.g("username").contains(u.username).run(conn))
 		{
-			System.out.println("Duplicate Entry");
-			
+			System.out.println("Duplicate User Entry");		
 			return 1;
 		}
 		else
@@ -42,7 +41,7 @@ public class User
 				return u;
 			}
 		}
-		else System.out.println("nexists");
+		else System.out.println("User does not Exist");
 		return null;
 	}
 }
