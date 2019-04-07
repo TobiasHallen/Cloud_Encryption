@@ -1,6 +1,4 @@
-package util;
-
-import java.security.PublicKey;
+package serverUtil;
 
 public class User 
 {

@@ -1,8 +1,7 @@
-package util;
+package serverUtil;
 
 public class FileKey 
 {
-
 	public String id;
 	public String user;
 	public String owner;
@@ -18,15 +17,7 @@ public class FileKey
 		this.key = key;
 	}
 	
-	public void printFileKey(FileKey f)
-	{
-		System.out.println(f.id);
-		System.out.println(f.user);
-		System.out.println(f.owner);
-		System.out.println(f.name);
-		System.out.println(f.key);
-		
-	}
+	
 	
 	public FileKey()
 	{

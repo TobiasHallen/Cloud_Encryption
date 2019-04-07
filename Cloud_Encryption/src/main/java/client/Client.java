@@ -1,13 +1,8 @@
 package client;
 
-import java.awt.event.KeyEvent;
 import java.awt.BorderLayout;
-import java.awt.EventQueue;
-import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
@@ -21,55 +16,28 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Scanner;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-import javax.swing.AbstractAction;
-import javax.swing.Action;
 import javax.swing.BoxLayout;
-import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.swing.ScrollPaneConstants;
-import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
-import javax.swing.text.DefaultCaret;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.http.client.ClientProtocolException;
 
 import com.google.gson.Gson;
 
-import util.TextAreaOutputStream;
+import serverUtil.TextAreaOutputStream;
 
 public class Client 
 {
-	private static String usage = "  Usage:\r\n"+"  register\r\n" + 
-			"  upload <filepath> <filename>\r\n" + 
-			"  download <user> <filename> <outputpath>\r\n" + 
-			"  share <filename> <users>\r\n" + 
-			"  revoke <filename> <users>\r\n" ; 
-
 	final JFileChooser fc = new JFileChooser();
-	private static JTextArea txtAbout;
-	private static JTextField iOField;
-
-	private static JTextArea clientInfoArea;
-	private static JTextArea userIOArea;
-
-	private static JScrollPane connInfoScrollPane;
-	private static JScrollPane userIOScrollPane;
-	private static JFrame clientUI;
-
 	public static PublicKey publicKey;
 	public static PrivateKey privateKey;
 	public static KeyPair kp;
@@ -77,6 +45,7 @@ public class Client
 
 	public static void main(String[] args) throws IOException, GeneralSecurityException, UnsupportedLookAndFeelException
 	{
+		
 		initialize();	
 	}
 
@@ -84,10 +53,10 @@ public class Client
 	{
 		KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
 		kpg.initialize(1024);
-		kp = Crypto.generateKeyPair(userName);
+		kp = ClientCrypto.generateKeyPair(userName);
 		privateKey=kp.getPrivate();
 		publicKey=kp.getPublic();
-		User u = new User(userName, publicKey.getEncoded());
+		serverUtil.User u = new serverUtil.User(userName, publicKey.getEncoded());
 		ClientUserFunctions.Register(u);
 		System.out.println("Registered Successfully!");
 	}
@@ -95,14 +64,13 @@ public class Client
 	public static void Upload(String filepath, String filename) throws IOException, GeneralSecurityException
 	{
 		java.io.File file = new java.io.File(filepath);
-		SecretKey sk = Crypto.generateAESKey();
+		SecretKey sk = ClientCrypto.generateAESKey();
 		byte[] b = Files.readAllBytes(file.toPath());
-		byte[] encoded = Crypto.encryptAES(sk, b);
-		File f = new File(ClientUser, filename, encoded);
+		byte[] encoded = ClientCrypto.encryptAES(sk, b);
+		ClientFile f = new ClientFile(ClientUser, filename, encoded);
 		ClientFileFunctions.Upload(f, privateKey);
-		byte[] encodedKey = Crypto.encrypt(sk.getEncoded(), publicKey);
-		FileKey fk = new FileKey(ClientUser, ClientUser, filename, encodedKey);
-		System.out.println(new String(fk.key));
+		byte[] encodedKey = ClientCrypto.encrypt(sk.getEncoded(), publicKey);
+		ClientFileKey fk = new ClientFileKey(ClientUser, ClientUser, filename, encodedKey);
 		ClientFileKeyFunctions.Share(fk, privateKey);
 		System.out.println("Successfully Uploaded File!");
 	}
@@ -113,7 +81,7 @@ public class Client
 		if(pem.exists())
 		{
 			ClientUser=newUser;
-			kp = Crypto.generateKeyPair(newUser);
+			kp = ClientCrypto.generateKeyPair(newUser);
 			privateKey=kp.getPrivate();
 			publicKey=kp.getPublic();
 			System.out.println("Logged in as: "+newUser);
@@ -124,14 +92,13 @@ public class Client
 
 	public static void Download(String owner, String filename, String outPath) throws ClientProtocolException, IOException, GeneralSecurityException
 	{
-		System.out.println(owner+"     "+filename+"        "+ClientUser);
-		File f = ClientFileFunctions.GetFile(owner, filename, ClientUser);
-		FileKey fk = ClientFileKeyFunctions.GetFileKey(owner, filename, ClientUser);
+		ClientFile f = ClientFileFunctions.GetFile(owner, filename, ClientUser);
+		ClientFileKey fk = ClientFileKeyFunctions.GetFileKey(owner, filename, ClientUser);
 
 		byte[] decodedData = "".getBytes();
 		try {
-			byte[] decodedKey = Crypto.decrypt(fk.key, privateKey);
-			decodedData = Crypto.decryptAES(new SecretKeySpec(decodedKey, 0, decodedKey.length,"DES"), f.data);
+			byte[] decodedKey = ClientCrypto.decrypt(fk.key, privateKey);
+			decodedData = ClientCrypto.decryptAES(new SecretKeySpec(decodedKey, 0, decodedKey.length,"DES"), f.data);
 			FileUtils.writeByteArrayToFile(new java.io.File("C:\\Users\\artha\\Documents\\GitHub\\Cloud_Encryption\\Cloud_Encryption\\upANDdownloadFolder"+"\\noDecryption"+filename), f.data);
 			FileUtils.writeByteArrayToFile(new java.io.File(outPath), decodedData);
 			System.out.println("Successfully Downloaded File!");
@@ -144,16 +111,16 @@ public class Client
 
 	public static void Share(String filename, String[] Users) throws ClientProtocolException, IOException, GeneralSecurityException
 	{
-		FileKey fk = ClientFileKeyFunctions.GetFileKey(ClientUser, filename, ClientUser);
-		byte[] decodedKey = Crypto.decrypt(fk.key, privateKey);
+		ClientFileKey fk = ClientFileKeyFunctions.GetFileKey(ClientUser, filename, ClientUser);
+		byte[] decodedKey = ClientCrypto.decrypt(fk.key, privateKey);
 		for(String u : Users)
 		{
 			if(!u.equals(ClientUser))
 			{
-				User user = ClientUserFunctions.GetUser(u);
+				serverUtil.User user = ClientUserFunctions.GetUser(u);
 				fk.id="";
 				fk.user=u;
-				byte[] encodedKey = Crypto.encrypt(decodedKey, KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(user.PubKey)));
+				byte[] encodedKey = ClientCrypto.encrypt(decodedKey, KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(user.PubKey)));
 				fk.key=encodedKey;
 				ClientFileKeyFunctions.Share(fk, privateKey);
 			}
@@ -163,31 +130,44 @@ public class Client
 
 	public static void Revoke(String filename, String[] users) throws ClientProtocolException, IOException, GeneralSecurityException
 	{
-		System.out.println(Arrays.toString(users));
-		File f = ClientFileFunctions.GetFile(ClientUser, filename, ClientUser);
-		FileKey fk = ClientFileKeyFunctions.GetFileKey(ClientUser, filename, ClientUser);
+		ClientFile f = ClientFileFunctions.GetFile(ClientUser, filename, ClientUser);
+		ClientFileKey fk = ClientFileKeyFunctions.GetFileKey(ClientUser, filename, ClientUser);
 
-		byte[] decodedKey = Crypto.decrypt(fk.key, privateKey);
-		byte[] decodedData = Crypto.decryptAES(new SecretKeySpec(decodedKey, 0, decodedKey.length,"DES"), f.data);
-		SecretKey sk = Crypto.generateAESKey();
-		byte[] encodedData = Crypto.encryptAES(sk, decodedData);
+		byte[] decodedKey = ClientCrypto.decrypt(fk.key, privateKey);
+		byte[] decodedData = ClientCrypto.decryptAES(new SecretKeySpec(decodedKey, 0, decodedKey.length,"DES"), f.data);
+		SecretKey sk = ClientCrypto.generateAESKey();
+		byte[] encodedData = ClientCrypto.encryptAES(sk, decodedData);
 		f.data=encodedData;
 
 		ClientFileFunctions.Upload(f, privateKey);
 
-		byte[] encodedKey=Crypto.encrypt(sk.getEncoded(), publicKey);
+		byte[] encodedKey=ClientCrypto.encrypt(sk.getEncoded(), publicKey);
 		fk.key=encodedKey;
-		Gson gson = new Gson();
+		new Gson();
 
 		ClientFileKeyFunctions.Share(fk, privateKey);
 
 		for(String u:users)
 		{
-			FileKey fileKey = new FileKey(u, ClientUser, filename, null);
+			ClientFileKey fileKey = new ClientFileKey(u, ClientUser, filename, null);
 			ClientFileKeyFunctions.Revoke(fileKey, privateKey);
 		}
-		FileUsers fUsers = ClientFileFunctions.GetFileUsers(ClientUser, filename, ClientUser);
-		if(fUsers.users!=null)Share(filename, fUsers.users);
+		List<String> fUsers = ClientFileFunctions.GetFileUsers(ClientUser, filename, ClientUser);
+		Gson gson = new Gson();
+		List<String> s = new ArrayList<String>();
+		for(Object o : fUsers)
+		{
+			FileUsers fu = gson.fromJson(gson.toJson(o), FileUsers.class);
+			if(!fu.user.equals(f.owner))
+			{
+				s.add(fu.user);
+			}
+		}
+		Share(filename, s.toArray(new String[0]));
+//		if(fUsers!=null)
+//		{
+//			Share(filename, fUsers.toString());
+//		}
 		System.out.println("Successfully Revoked File!");
 	}
 

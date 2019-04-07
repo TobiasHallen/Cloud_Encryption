@@ -1,4 +1,4 @@
-package util;
+package serverUtil;
 import java.security.*;
 import java.util.Base64;
 

@@ -1,6 +1,5 @@
 package client;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -17,13 +16,13 @@ import org.apache.http.impl.client.HttpClientBuilder;
 
 import com.google.gson.*;
 
-public class ClientFileKeyFunctions 
+class ClientFileKeyFunctions 
 {
-	public static void Share(FileKey fk, PrivateKey pk) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, ClientProtocolException, IOException
+	static void Share(ClientFileKey fk, PrivateKey pk) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, ClientProtocolException, IOException
 	{
 		Gson gson = new Gson();
 		String message = gson.toJson(fk);
-		String signature = Crypto.sign(pk, message);
+		String signature = ClientCrypto.sign(pk, message);
 		SignedRequest sr = new SignedRequest(message, signature);
 		String signedJSON = gson.toJson(sr);
 		HttpClient httpClient = HttpClientBuilder.create().build();
@@ -39,11 +38,11 @@ public class ClientFileKeyFunctions
 		else System.out.println("Response was OK");
 	}
 
-	public static void Revoke(FileKey fk, PrivateKey pk) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, ClientProtocolException, IOException
+	static void Revoke(ClientFileKey fk, PrivateKey pk) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, ClientProtocolException, IOException
 	{
 		Gson gson = new Gson();
 		String message = gson.toJson(fk);
-		String signature = Crypto.sign(pk, message);
+		String signature = ClientCrypto.sign(pk, message);
 		SignedRequest sr = new SignedRequest(message, signature);
 		String signedJSON = gson.toJson(sr);
 		HttpClient httpClient = HttpClientBuilder.create().build();
@@ -59,7 +58,7 @@ public class ClientFileKeyFunctions
 		else System.out.println("Response was OK");
 	}
 
-	public static FileKey GetFileKey(String owner, String filename, String clientUser) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, ClientProtocolException, IOException
+	static ClientFileKey GetFileKey(String owner, String filename, String clientUser) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, ClientProtocolException, IOException
 	{
 		HttpClient httpClient = HttpClientBuilder.create().build();
 		HttpGet get = new HttpGet("http://80.111.202.166:8000/"+"users/"+owner+"/"+filename+"/key/"+clientUser);
@@ -67,15 +66,14 @@ public class ClientFileKeyFunctions
 		if(response.getStatusLine().getStatusCode()!=200)
 		{
 			System.out.println("Response was not Positive: "+response.getStatusLine().getStatusCode());
-			return new FileKey();
+			return new ClientFileKey();
 		}
 		else 
 		{
 			System.out.println("Response was OK");
 			String responseString = new BasicResponseHandler().handleResponse(response);
-			System.out.println(responseString);
 			Gson g = new Gson();
-			FileKey fk= g.fromJson(responseString, FileKey.class);
+			ClientFileKey fk= g.fromJson(responseString, ClientFileKey.class);
 			return fk;
 		}
 

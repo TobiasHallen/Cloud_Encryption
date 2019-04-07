@@ -1,10 +1,10 @@
 package client;
 
-public class SignedRequest 
+class SignedRequest 
 {
 	public String message;
 	public String signature;
-	public SignedRequest(String message, String signature) {
+	SignedRequest(String message, String signature) {
 		super();
 		this.message = message;
 		this.signature = signature;

@@ -1,4 +1,4 @@
-package util;
+package serverUtil;
 
 public class DBUser 
 {

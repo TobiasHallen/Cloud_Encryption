@@ -8,12 +8,12 @@ import com.rethinkdb.net.Cursor;
 
 public class User 
 {
-	static String DBHost = "127.0.0.1";
-	public static final RethinkDB r = RethinkDB.r;
-	static Connection conn = r.connection().hostname(DBHost).port(28015).connect();
-	static Table userTable = r.db("Cloud_Encryption").table("users");
+	private static String DBHost = "127.0.0.1";
+	private static final RethinkDB r = RethinkDB.r;
+	private static Connection conn = r.connection().hostname(DBHost).port(28015).connect();
+	private static Table userTable = r.db("Cloud_Encryption").table("users");
 	
-	public static int insert(util.User u) 
+	public static int insert(serverUtil.User u) 
 	{
 		if(userTable.g("username").contains(u.username).run(conn))
 		{
@@ -22,13 +22,14 @@ public class User
 		}
 		else
 		{
-			util.DBUser user = new util.DBUser(u.id,u.username,u.PubKey.toString());
+			serverUtil.DBUser user = new serverUtil.DBUser(u.id,u.username,u.PubKey.toString());
 			userTable.insert(r.hashMap("username", user.username).with("PubKey", r.binary(u.PubKey))).run(conn);
 			return 0;
 		}
 	}
 	
-	public static util.User GetUser(String username)
+	@SuppressWarnings("rawtypes")
+	static serverUtil.User GetUser(String username)
 	{
 		if(userTable.g("username").contains(username).run(conn))
 		{
@@ -37,7 +38,7 @@ public class User
 			{
 				Gson gson = new Gson();
 				String s = gson.toJson(doc);
-				util.User u = gson.fromJson(s, util.User.class);
+				serverUtil.User u = gson.fromJson(s, serverUtil.User.class);
 				return u;
 			}
 		}

@@ -8,11 +8,10 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 
 import express.Express;
-import util.TextAreaOutputStream;
+import serverUtil.TextAreaOutputStream;
 
 public class Server 
 {
@@ -47,7 +46,7 @@ public class Server
         Express app = new Express();
         try {
         	System.out.println("Starting up Server...");
-			app.bind(new Bindings()); // See class below
+			app.bind(new ServerBindings()); // See class below
 			app.listen(8000);
 		} catch (java.lang.ExceptionInInitializerError e) {
 			System.out.println("Server Refused Connection. Shutting Down.");

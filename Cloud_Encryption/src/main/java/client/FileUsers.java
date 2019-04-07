@@ -1,11 +1,11 @@
 package client;
 
-public class FileUsers 
+class FileUsers 
 {
-	public String[] users;
+	String user;
 
-	public FileUsers(String[] users) {
+	FileUsers(String user) {
 		super();
-		this.users = users;
+		this.user = user;
 	}
 }
