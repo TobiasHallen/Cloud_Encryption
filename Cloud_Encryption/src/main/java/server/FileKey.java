@@ -5,6 +5,7 @@ import com.rethinkdb.gen.ast.Table;
 import com.rethinkdb.net.Connection;
 import com.rethinkdb.net.Cursor;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -17,20 +18,14 @@ public class FileKey
 
 
 	static int insert(serverUtil.FileKey fk)
-	{
-		if(filekeytable.g("name").contains(fk.name).run(conn))
+	{	
+		serverUtil.FileKey f = getFileKey(fk.owner, fk.name, fk.user);
+		if(f.name.equals(fk.name)&&f.user.equals(fk.user)&&f.owner.equals(fk.owner))
 		{
-			if(filekeytable.g("owner").contains(fk.owner).run(conn))
-			{
-				if(filekeytable.g("user").contains(fk.user).run(conn))
-				{
 					System.out.println("Duplicate FileKey Entry");
-					serverUtil.FileKey f = getFileKey(fk.owner, fk.name, fk.user);
 					fk.id = f.id;
 					filekeytable.insert(r.hashMap("name", fk.name).with("id", fk.id).with("user", fk.user).with("owner", fk.owner).with("key", r.binary(fk.key))).optArg("conflict", "replace").run(conn);
 					return 1;
-				}
-			}
 		}
 		filekeytable.insert(r.hashMap("name", fk.name).with("user", fk.user).with("owner", fk.owner).with("key", r.binary(fk.key))).run(conn);
 		return 0;
@@ -68,11 +63,16 @@ public class FileKey
 		try {
 			dbRes = filekeytable.getAll(filename).optArg("index", "name").filter(r.hashMap("owner", owner).with("user", user)).run(conn);
 			HashMap m = (HashMap) dbRes.next();
+			System.out.println(Arrays.asList(m));
+			System.out.println(Arrays.asList(m));
+			System.out.println(Arrays.asList(m));
+			System.out.println(Arrays.asList(m));
+
 			serverUtil.FileKey fk = new serverUtil.FileKey((String)m.get("id"), (String)m.get("user"), (String)m.get("owner"), (String)m.get("name"), (byte[])m.get("key"));
 			return fk;
 		} catch (java.util.NoSuchElementException e) {
 			System.out.println("Invalid file access");
-			System.out.println("User "+user+" does not have access to file "+filename+" owned by "+owner);
+			System.out.println("Tried to access nonexistant FileKey");
 		}
 		return new serverUtil.FileKey();
 	}

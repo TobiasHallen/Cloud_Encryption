@@ -105,15 +105,19 @@ class ServerBindings {
 				res.setStatus(Status.valueOf(403));
 				res.send("Could not Verify Signature!");
 			}
-			else if(FileKey.revoke(fk)==2)
+			else
 			{
-				res.send("Cannot revoke own file access!");
+				int i = FileKey.revoke(fk);
+				if(i==2)
+				{
+					res.send("Cannot revoke own file access!");
+				}
+				else if(i==1) 
+				{
+					res.send("FileKey entry does not exist, cannot be revoked!");
+				}
+				else res.send("File access Revoked!");
 			}
-			else if(FileKey.revoke(fk)==1) 
-			{
-				res.send("FileKey entry does not exist, cannot be revoked!");
-			}
-			else res.send("File access Revoked!");
 		}
 		else
 		{
