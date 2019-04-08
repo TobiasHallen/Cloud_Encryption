@@ -1,0 +1,35 @@
+register alice
+
+register tom
+
+register james
+
+register anthony
+
+login alice
+
+upload C:\Users\artha\Documents\GitHub\Cloud_Encryption\Cloud_Encryption\upANDdownloadFolder\testing.jpeg testing.jpeg
+
+login tom
+
+download alice testing.jpeg C:\Users\artha\Documents\GitHub\Cloud_Encryption\Cloud_Encryption\upANDdownloadFolder\downloadTOM.jpeg
+
+login alice
+
+share testing.jpeg james tom anthony
+
+login tom 
+
+download alice testing.jpeg C:\Users\artha\Documents\GitHub\Cloud_Encryption\Cloud_Encryption\upANDdownloadFolder\downloadTOM.jpeg
+
+login alice
+
+revoke testing.jpeg james
+
+login james
+
+download alice testing.jpeg C:\Users\artha\Documents\GitHub\Cloud_Encryption\Cloud_Encryption\upANDdownloadFolder\downloadJAMES.jpeg
+
+login anthony
+
+download alice testing.jpeg C:\Users\artha\Documents\GitHub\Cloud_Encryption\Cloud_Encryption\upANDdownloadFolder\downloadANTHONY.jpeg
